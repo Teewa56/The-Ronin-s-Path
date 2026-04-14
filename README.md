@@ -151,7 +151,7 @@ ronins-path/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/ronins-path.git
+git clone https://github.com/teewa56/the-ronin-s-path.git
 cd ronins-path
 ```
 
@@ -274,10 +274,10 @@ Booster multipliers are weighted by **Fanship History** — a fan who has partic
 
 ## 🗺️ Roadmap
 
-- [x] Core prediction quest contracts (Move)
-- [x] Clan registration & scoring system
-- [x] Booster minting & equip logic
-- [x] Fanship / Kensho lineage layer
+- [ ] Core prediction quest contracts (Move)
+- [ ] Clan registration & scoring system
+- [ ] Booster minting & equip logic
+- [ ] Fanship / Kensho lineage layer
 - [ ] Live oracle integration (Death Blow Moments)
 - [ ] Dojo Wars season leaderboard UI
 - [ ] Walrus-backed fan profile storage
@@ -290,8 +290,9 @@ Booster multipliers are weighted by **Fanship History** — a fan who has partic
 
 Built for the **Sui x ONE Samurai Tokyo Builders' Arena** hackathon (Apr 2026).
 
+- Marvelous Ogunode(Protocol and Fullstack Developer)
 ---
 
 ## 📄 License
 
-MIT License. See `LICENSE` for details.
+MIT License. See `./LICENSE` for details.
