@@ -78,6 +78,10 @@ ONE Championship's Japanese fanbase is passionate — but passive. Fans watch, c
 ronins-path/
 │
 ├── contracts/                  # Sui Move smart contracts
+|       tests/                      # Contract unit tests
+│         ├── prediction_test.move
+│         ├── clan_test.move
+│         └── fanship_test.move
 │   ├── prediction/             # Prediction quest logic
 │   │   ├── sources/
 │   │   │   ├── prediction.move
@@ -125,10 +129,6 @@ ronins-path/
 │   ├── seed_clans.ts
 │   └── mint_boosters.ts
 │
-├── tests/                      # Contract unit tests
-│   ├── prediction_test.move
-│   ├── clan_test.move
-│   └── fanship_test.move
 │
 ├── .env.example
 ├── README.md
