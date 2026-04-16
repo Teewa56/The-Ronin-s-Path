@@ -1,0 +1,14 @@
+[package]
+name = "prediction"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "testnet" }
+Fanship = { local = "../fanship" }
+Clan = { local = "../clan" }
+
+[addresses]
+prediction = "0x0"
+fanship = "0x0"
+clan = "0x0"
