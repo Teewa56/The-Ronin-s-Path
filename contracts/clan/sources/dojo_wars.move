@@ -56,6 +56,7 @@ module clan::dojo_wars {
         season: u64,
         clan_id: address,
         clan_name: String,
+        recipient: address,
         fighter_name: String,    // assigned when fight is booked
         event_name: String,      // which event they sponsor
         is_activated: bool,
@@ -100,6 +101,7 @@ module clan::dojo_wars {
     public struct CornerRightAwarded has copy, drop {
         clan_id: address,
         clan_name: String,
+        recipient: address,
         season: u64,
     }
 
@@ -180,12 +182,14 @@ module clan::dojo_wars {
 
     /// Finalize the season. Admin supplies the top 2 clan IDs
     /// (determined off-chain by reading leaderboard entries).
-    /// In a production build this would do full on-chain sorting.
+    /// In production this would do full on-chain sorting, and the
+    /// corner sponsorship is awarded to the supplied representative address.
     public entry fun finalize_season(
         _cap: &AdminCap,
         leaderboard: &mut DojoWarsLeaderboard,
         champion_clan: &Clan,
         runner_up_clan: &Clan,
+        representative: address,
         ctx: &mut TxContext
     ) {
         assert!(!leaderboard.finalized, ESeasonAlreadyFinalized);
@@ -223,13 +227,13 @@ module clan::dojo_wars {
 
         transfer::share_object(snapshot);
 
-        // Award corner sponsorship right to the winning clan's head address
-        // (in production, transferred to clan's multisig or representative)
+        // Award corner sponsorship right to the winning clan's representative.
         let corner_right = CornerSponsorshipRight {
             id: object::new(ctx),
             season: leaderboard.season,
             clan_id: champion_id,
             clan_name: get_clan_name(champion_clan),
+            recipient: representative,
             fighter_name: string::utf8(b"TBD"),
             event_name: string::utf8(b"TBD"),
             is_activated: false,
@@ -238,11 +242,12 @@ module clan::dojo_wars {
         event::emit(CornerRightAwarded {
             clan_id: champion_id,
             clan_name: get_clan_name(champion_clan),
+            recipient: representative,
             season: leaderboard.season,
         });
 
-        // Shared so the winning clan and platform can both read it
-        transfer::share_object(corner_right);
+        // Transfer the sponsorship right directly to the representative.
+        transfer::transfer(corner_right, representative);
     }
 
     /// Assign the corner sponsorship to a specific fighter and event.

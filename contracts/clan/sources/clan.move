@@ -12,6 +12,7 @@ module clan::clan {
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
     use std::string::{Self, String};
+    use std::vector::{Self, Vector};
     use fanship::fanship::{FanProfile, get_owner, get_clan_id};
 
     // ============================================================
@@ -210,20 +211,37 @@ module clan::clan {
     }
 
     /// End the current season and declare a winner.
-    /// In production this would compare all clan scores — here admin triggers it
-    /// with the winning clan supplied.
+    /// Compares all registered clan scores on-chain and selects the top clan.
     public entry fun end_season(
         _cap: &AdminCap,
         registry: &mut ClanRegistry,
-        winning_clan: &mut Clan,
         ctx: &mut TxContext
     ) {
         assert!(registry.season_active, ESeasonNotActive);
+        assert!(registry.total_clans > 0, EClanNotFound);
 
         let season = registry.current_season;
-        let clan_addr = object::id_address(winning_clan);
+        let clan_ids = table::keys(&registry.clans);
+        let mut i = 0;
+        let mut winning_clan_id = @0x0;
+        let mut winning_clan_name = string::utf8(b"");
+        let mut winning_score = 0;
 
-        // Snapshot the winning clan's score for this season
+        while (i < vector::length(&clan_ids)) {
+            let clan_id = *vector::borrow(&clan_ids, i);
+            let clan_ref = sui::object::borrow_global<Clan>(clan_id);
+            let score = get_season_score(clan_ref);
+
+            if (score >= winning_score) {
+                winning_score = score;
+                winning_clan_id = clan_id;
+                winning_clan_name = get_clan_name(clan_ref);
+            };
+
+            i = i + 1;
+        };
+
+        let mut winning_clan = sui::object::borrow_global_mut<Clan>(winning_clan_id);
         table::add(
             &mut winning_clan.season_scores,
             season,
@@ -231,23 +249,21 @@ module clan::clan {
         );
         winning_clan.is_reigning_champion = true;
 
-        // Store season result on-chain
         let result = SeasonResult {
             id: object::new(ctx),
             season,
-            winning_clan_id: clan_addr,
-            winning_clan_name: winning_clan.name,
-            winning_score: winning_clan.current_season_score,
+            winning_clan_id,
+            winning_clan_name: winning_clan_name,
+            winning_score,
         };
 
         event::emit(SeasonEnded {
             season,
-            winning_clan_id: clan_addr,
-            winning_clan_name: winning_clan.name,
-            winning_score: winning_clan.current_season_score,
+            winning_clan_id,
+            winning_clan_name: result.winning_clan_name,
+            winning_score,
         });
 
-        // Advance season
         registry.current_season = registry.current_season + 1;
         registry.season_active = false;
 
