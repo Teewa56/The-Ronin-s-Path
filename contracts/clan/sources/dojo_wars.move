@@ -10,7 +10,7 @@ module clan::dojo_wars {
     use sui::table::{Self, Table};
     use sui::event;
     use std::string::{Self, String};
-    use std::vector::{Self, Vector};
+    use std::vector::{Self};
     use clan::clan::{
         AdminCap, ClanRegistry, Clan,
         get_season_score, get_clan_name, get_current_season
@@ -35,6 +35,8 @@ module clan::dojo_wars {
         season: u64,
         /// clan_id → SeasonEntry
         entries: Table<address, SeasonEntry>,
+        /// Ordered list of clan IDs for sorting
+        clan_ids: vector<address>,
         clan_count: u64,
         finalized: bool,
         /// Address of the season champion clan
@@ -51,7 +53,7 @@ module clan::dojo_wars {
     }
 
     /// Temporary struct for sorting clan scores
-    struct ClanScore has drop {
+    public struct ClanScore has store, drop, copy {
         clan_id: address,
         score: u64,
     }
@@ -121,6 +123,7 @@ module clan::dojo_wars {
             id: object::new(ctx),
             season: 1,
             entries: table::new(ctx),
+            clan_ids: vector::empty(),
             clan_count: 0,
             finalized: false,
             champion_clan_id: @0x0,
@@ -158,6 +161,7 @@ module clan::dojo_wars {
                 rank: 0,
             };
             table::add(&mut leaderboard.entries, clan_id, entry);
+            vector::push_back(&mut leaderboard.clan_ids, clan_id);
             leaderboard.clan_count = leaderboard.clan_count + 1;
         };
     }
@@ -200,22 +204,22 @@ module clan::dojo_wars {
         assert!(leaderboard.clan_count >= 2, ENotEnoughClans);
 
         // Collect all clan entries for sorting
-        let clan_ids = table::keys(&leaderboard.entries);
         let mut clan_scores = vector::empty<ClanScore>();
         let mut i = 0;
-        while (i < vector::length(&clan_ids)) {
-            let clan_id = *vector::borrow(&clan_ids, i);
+        let len = vector::length(&leaderboard.clan_ids);
+        while (i < len) {
+            let clan_id = *vector::borrow(&leaderboard.clan_ids, i);
             let entry = table::borrow(&leaderboard.entries, clan_id);
             vector::push_back(&mut clan_scores, ClanScore {clan_id, score: entry.total_points});
             i = i + 1;
         };
 
         // Simple bubble sort by score descending
-        let len = vector::length(&clan_scores);
+        let sort_len = vector::length(&clan_scores);
         let mut j = 0;
-        while (j < len) {
+        while (j < sort_len) {
             let mut k = 0;
-            while (k < len - 1 - j) {
+            while (k < sort_len - 1 - j) {
                 let a = vector::borrow(&clan_scores, k);
                 let b = vector::borrow(&clan_scores, k + 1);
                 if (a.score < b.score) {
@@ -230,20 +234,23 @@ module clan::dojo_wars {
         };
 
         // Champion is first, runner-up is second
-        let champion_entry = vector::borrow(&clan_scores, 0);
-        let runner_up_entry = vector::borrow(&clan_scores, 1);
-        let champion_id = champion_entry.clan_id;
-        let runner_up_id = runner_up_entry.clan_id;
+        let champion_score_entry = vector::borrow(&clan_scores, 0);
+        let runner_up_score_entry = vector::borrow(&clan_scores, 1);
+        let champion_id = champion_score_entry.clan_id;
+        let runner_up_id = runner_up_score_entry.clan_id;
 
-        // Borrow the Clan objects
-        let champion_clan = sui::object::borrow_global<Clan>(champion_id);
-        let runner_up_clan = sui::object::borrow_global<Clan>(runner_up_id);
+        // Fetch from entries table to get current scores
+        let champion_entry = table::borrow(&leaderboard.entries, champion_id);
+        let runner_up_entry = table::borrow(&leaderboard.entries, runner_up_id);
+        let champion_score = champion_entry.total_points;
+        let runner_up_score = runner_up_entry.total_points;
 
-        let champion_score = get_season_score(champion_clan);
-        let runner_up_score = get_season_score(runner_up_clan);
+        // Get clan names from entries
+        let champion_clan_name = champion_entry.clan_name;
+        let runner_up_clan_name = runner_up_entry.clan_name;
 
         leaderboard.champion_clan_id = champion_id;
-        leaderboard.champion_clan_name = get_clan_name(champion_clan);
+        leaderboard.champion_clan_name = champion_clan_name;
         leaderboard.finalized = true;
 
         // Store permanent snapshot on-chain
@@ -251,10 +258,10 @@ module clan::dojo_wars {
             id: object::new(ctx),
             season: leaderboard.season,
             champion_clan_id: champion_id,
-            champion_clan_name: get_clan_name(champion_clan),
+            champion_clan_name: champion_clan_name,
             champion_score,
             runner_up_clan_id: runner_up_id,
-            runner_up_clan_name: get_clan_name(runner_up_clan),
+            runner_up_clan_name: runner_up_clan_name,
             runner_up_score,
             total_clans: leaderboard.clan_count,
         };
@@ -262,7 +269,7 @@ module clan::dojo_wars {
         event::emit(SeasonFinalized {
             season: leaderboard.season,
             champion_clan_id: champion_id,
-            champion_clan_name: get_clan_name(champion_clan),
+            champion_clan_name: champion_clan_name,
             champion_score,
         });
 
@@ -273,7 +280,7 @@ module clan::dojo_wars {
             id: object::new(ctx),
             season: leaderboard.season,
             clan_id: champion_id,
-            clan_name: get_clan_name(champion_clan),
+            clan_name: champion_clan_name,
             recipient: representative,
             fighter_name: string::utf8(b"TBD"),
             event_name: string::utf8(b"TBD"),
@@ -282,7 +289,7 @@ module clan::dojo_wars {
 
         event::emit(CornerRightAwarded {
             clan_id: champion_id,
-            clan_name: get_clan_name(champion_clan),
+            clan_name: champion_clan_name,
             recipient: representative,
             season: leaderboard.season,
         });
@@ -317,6 +324,7 @@ module clan::dojo_wars {
             id: object::new(ctx),
             season: new_season,
             entries: table::new(ctx),
+            clan_ids: vector::empty(),
             clan_count: 0,
             finalized: false,
             champion_clan_id: @0x0,

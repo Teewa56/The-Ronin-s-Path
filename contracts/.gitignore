@@ -3,3 +3,6 @@ traces/*
 .trace
 .coverage*
 Pub.*.toml
+prediction/build/*
+clan/build/*
+fanship/build/*
