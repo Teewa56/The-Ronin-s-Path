@@ -10,6 +10,7 @@ module clan::dojo_wars {
     use sui::table::{Self, Table};
     use sui::event;
     use std::string::{Self, String};
+    use std::vector::{Self, Vector};
     use clan::clan::{
         AdminCap, ClanRegistry, Clan,
         get_season_score, get_clan_name, get_current_season
@@ -47,6 +48,12 @@ module clan::dojo_wars {
         total_points: u64,
         events_participated: u64,
         rank: u64, // updated at finalization
+    }
+
+    /// Temporary struct for sorting clan scores
+    struct ClanScore has drop {
+        clan_id: address,
+        score: u64,
     }
 
     /// The Corner Sponsorship Right — awarded to the winning clan.
@@ -180,23 +187,57 @@ module clan::dojo_wars {
         });
     }
 
-    /// Finalize the season. Admin supplies the top 2 clan IDs
-    /// (determined off-chain by reading leaderboard entries).
-    /// In production this would do full on-chain sorting, and the
-    /// corner sponsorship is awarded to the supplied representative address.
+    /// Finalize the season. Automatically determines champion and runner-up
+    /// by sorting all registered clans on-chain by their total points.
+    /// The corner sponsorship is awarded to the supplied representative address.
     public entry fun finalize_season(
         _cap: &AdminCap,
         leaderboard: &mut DojoWarsLeaderboard,
-        champion_clan: &Clan,
-        runner_up_clan: &Clan,
         representative: address,
         ctx: &mut TxContext
     ) {
         assert!(!leaderboard.finalized, ESeasonAlreadyFinalized);
         assert!(leaderboard.clan_count >= 2, ENotEnoughClans);
 
-        let champion_id = sui::object::id_address(champion_clan);
-        let runner_up_id = sui::object::id_address(runner_up_clan);
+        // Collect all clan entries for sorting
+        let clan_ids = table::keys(&leaderboard.entries);
+        let mut clan_scores = vector::empty<ClanScore>();
+        let mut i = 0;
+        while (i < vector::length(&clan_ids)) {
+            let clan_id = *vector::borrow(&clan_ids, i);
+            let entry = table::borrow(&leaderboard.entries, clan_id);
+            vector::push_back(&mut clan_scores, ClanScore {clan_id, score: entry.total_points});
+            i = i + 1;
+        };
+
+        // Simple bubble sort by score descending
+        let len = vector::length(&clan_scores);
+        let mut j = 0;
+        while (j < len) {
+            let mut k = 0;
+            while (k < len - 1 - j) {
+                let a = vector::borrow(&clan_scores, k);
+                let b = vector::borrow(&clan_scores, k + 1);
+                if (a.score < b.score) {
+                    // Swap
+                    let temp = *a;
+                    *vector::borrow_mut(&mut clan_scores, k) = *b;
+                    *vector::borrow_mut(&mut clan_scores, k + 1) = temp;
+                };
+                k = k + 1;
+            };
+            j = j + 1;
+        };
+
+        // Champion is first, runner-up is second
+        let champion_entry = vector::borrow(&clan_scores, 0);
+        let runner_up_entry = vector::borrow(&clan_scores, 1);
+        let champion_id = champion_entry.clan_id;
+        let runner_up_id = runner_up_entry.clan_id;
+
+        // Borrow the Clan objects
+        let champion_clan = sui::object::borrow_global<Clan>(champion_id);
+        let runner_up_clan = sui::object::borrow_global<Clan>(runner_up_id);
 
         let champion_score = get_season_score(champion_clan);
         let runner_up_score = get_season_score(runner_up_clan);
