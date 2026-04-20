@@ -1,4 +1,4 @@
-import { SuiGrpcClient } from "@mysten/sui/grpc";
+import { SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 import { SuiObjectData } from "@mysten/sui/jsonRpc";
 
 // ── Network ────────────────────────────────────────────────────────────────────
@@ -32,9 +32,9 @@ export const SUI_CLOCK_ID = "0x6";
 
 // ── Singleton client ───────────────────────────────────────────────────────────
 
-export const suiClient = new SuiGrpcClient({
+export const suiClient = new SuiJsonRpcClient({
   network: NETWORK,
-  baseUrl: getFullnodeUrl(NETWORK),
+  url: getFullnodeUrl(NETWORK),
 });
 
 // ── Domain types (mirror Move structs) ────────────────────────────────────────
@@ -243,7 +243,7 @@ export async function getOwnedFanProfile(
   address: string
 ): Promise<FanProfile | null> {
   if (!CONTRACT.FANSHIP_PKG) return null;
-  const { data } = await suiClient.getObjects({
+  const { data } = await suiClient.getOwnedObjects({
     owner: address,
     filter: { StructType: `${CONTRACT.FANSHIP_PKG}::fanship::FanProfile` },
     options: { showContent: true },
@@ -254,7 +254,7 @@ export async function getOwnedFanProfile(
 
 export async function getOwnedBoosters(address: string): Promise<Booster[]> {
   if (!CONTRACT.PREDICTION_PKG) return [];
-  const { data } = await suiClient.getObjects({
+  const { data } = await suiClient.getOwnedObjects({
     owner: address,
     filter: { StructType: `${CONTRACT.PREDICTION_PKG}::booster::Booster` },
     options: { showContent: true },
@@ -270,7 +270,7 @@ export async function getOwnedMembership(
   address: string
 ): Promise<ClanMembership | null> {
   if (!CONTRACT.CLAN_PKG) return null;
-  const { data } = await suiClient.getObjects({
+  const { data } = await suiClient.getOwnedObjects({
     owner: address,
     filter: { StructType: `${CONTRACT.CLAN_PKG}::clan::ClanMembership` },
     options: { showContent: true },
@@ -283,7 +283,7 @@ export async function getOwnedPredictions(
   address: string
 ): Promise<Prediction[]> {
   if (!CONTRACT.PREDICTION_PKG) return [];
-  const { data } = await suiClient.getObjects({
+  const { data } = await suiClient.getOwnedObjects({
     owner: address,
     filter: {
       StructType: `${CONTRACT.PREDICTION_PKG}::prediction::Prediction`,
