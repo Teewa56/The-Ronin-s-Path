@@ -6,3 +6,4 @@ Pub.*.toml
 prediction/build/*
 clan/build/*
 fanship/build/*
+.env

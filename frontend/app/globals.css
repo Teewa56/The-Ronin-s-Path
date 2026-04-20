@@ -1,26 +1,97 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Inconsolata:wght@400;500;600&display=swap");
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:        #070708;
+  --bg-card:   #0e0e10;
+  --bg-raised: #161618;
+  --border:    #222226;
+  --border-hi: #3a3a3f;
+  --crimson:   #c41e3a;
+  --crimson-hi: #e8233f;
+  --gold:      #c9a227;
+  --gold-dim:  #7a6115;
+  --text:      #e8e4dd;
+  --text-muted: #706c68;
+  --text-dim:  #3f3c3a;
+  --green:     #2a9d4e;
+  --background: var(--bg);
+  --foreground: var(--text);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: "Rajdhani", sans-serif;
+  --font-mono: "Inconsolata", monospace;
+  --font-display: "Cinzel", serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+/* Noise texture overlay for depth */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* Global card style */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border-hi); }
+
+/* Accent line decoration */
+.accent-line::before {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 100%;
+  background: var(--crimson);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* Pulse animation for Death Blow */
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 30, 58, 0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(196, 30, 58, 0); }
+}
+.pulse-red { animation: pulse-red 1.2s ease-in-out infinite; }
+
+/* Countdown shrink */
+@keyframes shrink {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* Fade-slide in */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.4s ease forwards; }
